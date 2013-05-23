@@ -6,8 +6,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.CookieHandler;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.CookieStore;
+import java.net.HttpCookie;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 
@@ -27,17 +35,23 @@ public class Demobilizer extends JFrame{
 	
 	private JsonObject rData;
 	private String modhash;
+	private CookieManager cookieManager ;
+	private CookieStore cookieJar;
 	
 	private String[][] replacements = {
-			{"m.wikipedia.org", "wikipedia.org"},
+			{"y", "wikipedia.org"},
 			{"m.reddit.com", "reddit.com"},
 			{"m.facebook.com", "facebook.com"}
 			};
 	
 	public Demobilizer()
 	{
+		
+		cookieManager = new CookieManager();
+		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+		CookieHandler.setDefault(cookieManager);
 		try {
-		modhash = login("LinkDemobilizerBot", "passwordtest1");
+		modhash = login("LinkDemobilizerBot", "******");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -69,17 +83,26 @@ public class Demobilizer extends JFrame{
 	    ycConnection.setDoOutput(true);
 	    ycConnection.setUseCaches (false);
 	    ycConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-//	    ycConnection.setRequestProperty("Content-Length", data.length());
-
+	    
 	    PrintWriter out = new PrintWriter(ycConnection.getOutputStream());
 	    out.close();
 
 	    BufferedReader in = new BufferedReader(new InputStreamReader(ycConnection.getInputStream()));
 	    String response = in.readLine();
-	    System.out.println(response);
+	    System.out.println(response);  
 	    JsonParser parser = new JsonParser();
+	  
+	    cookieJar = cookieManager.getCookieStore();
+	    List<HttpCookie> cookies = cookieJar.getCookies();
+	    for(HttpCookie cookie : cookies)
+	    {
+	    	System.out.println("Received cookie "+cookie.getName()+" - "+cookie.getValue());
+	    }
 	    
-	   String modhash = parser.parse(response).getAsJsonObject().get("json").getAsJsonObject().get("data").getAsJsonObject().get("modhash").getAsString().replace("\"", "");
+	
+	    
+	    
+	  String modhash = parser.parse(response).getAsJsonObject().get("json").getAsJsonObject().get("data").getAsJsonObject().get("modhash").getAsString().replace("\"", "");
 	  return modhash;
 	}
 	
@@ -130,10 +153,14 @@ public class Demobilizer extends JFrame{
 						{
 							if(comment.contains(replacements[j][0]))
 							{
+								String reply = "(http://"+replacements[j][1]+"/"+comment.replace(replacements[j][0].replace("(", "").replace(")",""), "")+")";
 								System.out.println("Found match of "+replacements[j][0]);
-								String commentID  = "t1_"+je.getAsJsonArray().get(1).getAsJsonObject().get("data").getAsJsonObject().get("children").getAsJsonArray().get(i).getAsJsonObject().get("data").getAsJsonObject().get("id");
-					
-				    	        
+								String commentID  = je.getAsJsonArray().get(1).getAsJsonObject().get("data").getAsJsonObject().get("children").getAsJsonArray().get(i).getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString().replace("\"", "");
+								System.out.println(commentID);
+								System.out.println("Posting comment...");
+								System.out.println("Reply: "+reply.replace(" ", "%20"));
+								
+								if(!comment(commentID, reply))System.err.println("Unable to post comment");
 				
 							}
 							
@@ -152,7 +179,32 @@ public class Demobilizer extends JFrame{
 		} catch (MalformedURLException e) {} catch (IOException e) {
 			System.out.println("Could not connect to reddit.com");
 			e.printStackTrace();
+
 		}
+	}
+	
+	public boolean comment(String thing_id, String text)
+	{
+		try {
+			URL comment = new URL("http://www.reddit.com/api/comment?thing_id="+thing_id+"&text="+text+"&uh="+modhash);
+			System.out.println("Opening connection...");
+			HttpURLConnection connection = (HttpURLConnection) comment.openConnection();
+			connection.setRequestMethod("POST");
+			connection.setRequestProperty("Host","");
+			connection.setRequestProperty("Set-Cookie", cookieJar.get(new URI("http://reddit.com")).get(0).getValue());
+			connection.setRequestProperty("Length", "0");
+			connection.setRequestProperty("X-Target-URI","http://www.reddit.com");
+			System.out.println("Connected, reading reply...");
+			InputStream is = connection.getInputStream();
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+			System.out.println(br.readLine());
+			is.close();
+			br.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
 	}
 	
 	public JsonElement getListing(int listingNum)
