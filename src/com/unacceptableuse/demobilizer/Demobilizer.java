@@ -1,6 +1,5 @@
 package com.unacceptableuse.demobilizer;
 
-import java.awt.BorderLayout;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,15 +12,12 @@ import java.net.CookieStore;
 import java.net.HttpCookie;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JProgressBar;
 
 import sun.net.www.protocol.http.HttpURLConnection;
 
@@ -37,11 +33,19 @@ public class Demobilizer extends JFrame{
 	private String modhash;
 	private CookieManager cookieManager ;
 	private CookieStore cookieJar;
+	private ArrayList<String> postedThings = new ArrayList<String>();
+	private int posts = 0;
 	
 	private String[][] replacements = {
-			{"y", "wikipedia.org"},
+			{"en.m.wikipedia.org", "en.wikipedia.org"},
+			{"m.wikipedia.org", "wikipedia.org"},
 			{"m.reddit.com", "reddit.com"},
-			{"m.facebook.com", "facebook.com"}
+			{"m.facebook.com", "facebook.com"},
+			{"m.wolframalpha.com", "wolframalpha.com"},
+			{"m.flickr.com", "flickr.com"},
+			{"m.twitter.com", "twitter.com"},
+			{"mobile.myspace.com", "myspace.com"},
+			{"download.com/Palm-OS/", "download.com"}
 			};
 	
 	public Demobilizer()
@@ -51,11 +55,19 @@ public class Demobilizer extends JFrame{
 		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 		CookieHandler.setDefault(cookieManager);
 		try {
-		modhash = login("LinkDemobilizerBot", "******");
+		modhash = login("LinkDemobilizerBot", "passwordtest1");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		scanSubreddit("todayilearned", 20);
+		scanSubreddit("todayilearned", 25);
+		scanSubreddit("minecraft", 25);
+		scanSubreddit("HIMYM", 25);
+		scanSubreddit("abandonedporn", 25);
+		scanSubreddit("android", 25);
+		scanSubreddit("pics", 25);
+		scanSubreddit("askReddit", 25);
+		scanSubreddit("wikipedia", 25);
+		System.out.println("Done! "+posts+" posts demobilized.");
 	}
 	
 	
@@ -63,7 +75,7 @@ public class Demobilizer extends JFrame{
 	{
 /*		System.out.println("Attempting to login ");
 		t*/
-		
+		System.setProperty("http.agent", "");
 		new Demobilizer();
 		
 	}
@@ -83,7 +95,8 @@ public class Demobilizer extends JFrame{
 	    ycConnection.setDoOutput(true);
 	    ycConnection.setUseCaches (false);
 	    ycConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-	    
+	    ycConnection.setRequestProperty("User-Agent", "Link demobilizer bot by /u/UnacceptableUse");
+
 	    PrintWriter out = new PrintWriter(ycConnection.getOutputStream());
 	    out.close();
 
@@ -113,6 +126,7 @@ public class Demobilizer extends JFrame{
 			JsonParser parser = new JsonParser();
 			URL redditlink = new URL("http://reddit.com/r/"+subreddit+".json");
 			HttpURLConnection connection = (HttpURLConnection) redditlink.openConnection();
+			connection.setRequestProperty("User-Agent", "Link demobilizer bot by /u/UnacceptableUse");
 			InputStream is = connection.getInputStream();
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 			System.out.println("Successful! Parsing data...");
@@ -137,6 +151,7 @@ public class Demobilizer extends JFrame{
 
 					URL commentsLink = new URL("http://reddit.com/"+post.get("permalink").getAsString().replace("\"", "")+".json");
 					connection = (HttpURLConnection) commentsLink.openConnection();
+					connection.setRequestProperty("User-Agent", "Link demobilizer bot by /u/UnacceptableUse");
 					is = connection.getInputStream();
 					br = new BufferedReader(new InputStreamReader(is));
 					
@@ -153,33 +168,79 @@ public class Demobilizer extends JFrame{
 						{
 							if(comment.contains(replacements[j][0]))
 							{
-								String reply = "(http://"+replacements[j][1]+"/"+comment.replace(replacements[j][0].replace("(", "").replace(")",""), "")+")";
+								String reply = "**For non mobile users[:](http://reddit.com/r/LinkDemobilizerBot)**  \n ["+(comment.replace(replacements[j][0], replacements[j][1]).split("[")[1].split(")")[0])+")";
 								System.out.println("Found match of "+replacements[j][0]);
 								String commentID  = je.getAsJsonArray().get(1).getAsJsonObject().get("data").getAsJsonObject().get("children").getAsJsonArray().get(i).getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString().replace("\"", "");
-								System.out.println(commentID);
 								System.out.println("Posting comment...");
-								System.out.println("Reply: "+reply.replace(" ", "%20"));
+								System.out.println("Reply: "+reply);
 								
-								if(!comment(commentID, reply))System.err.println("Unable to post comment");
-				
+								postedThings.add(commentID);
+								boolean canPost = true;
+								for(String s : postedThings)
+								{
+									if(s == commentID)
+										canPost = false;
+								}
+								if(canPost)
+								{
+									posts++;
+									comment(commentID, reply);
+									System.out.println("Comment posted succesfully");
+								}
+								else
+								{
+									System.out.println("Comment was already posted");
+								}
 							}
 							
 						}
 					}
+					
+					System.out.println("Processing title...");
+					for(int j = 0; j < replacements.length; j++)
+					{
+						String postLink = je.getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("children").getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("url").getAsString();
+						if(postLink.contains(replacements[j][0]))
+						{
+							String reply = "**For non mobile users[:](http://reddit.com/r/LinkDemobilizerBot)**  \n"+postLink.replace(replacements[j][0], replacements[j][1]);
+							System.out.println("Found match of (intitle)"+replacements[j][0]);
+							String commentID  = je.getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("children").getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString().replace("\"", "");
+							System.out.println("Posting comment...");
+							System.out.println("Reply: "+reply);
+						
+							boolean canPost = true;
+							for(String s : postedThings)
+							{
+								if(s == commentID)
+									canPost = false;
+							}
+							if(canPost)
+							{
+								posts++;
+								comment(commentID, reply);
+								System.out.println("Comment posted succesfully");
+							}
+							else
+							{
+								System.out.println("Comment was already posted");
+							}
+							postedThings.add(commentID);
+						}
+					
+					}
+					
 
 				}
-			}
-			
-			
-			
-			
-		
-			
-			
+			}		
 		} catch (MalformedURLException e) {} catch (IOException e) {
 			System.out.println("Could not connect to reddit.com");
 			e.printStackTrace();
-
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+			System.err.println("An error occurred: "+e.getMessage());
+			System.err.println("Nevermind... continuing");
 		}
 	}
 	
@@ -190,11 +251,17 @@ public class Demobilizer extends JFrame{
 			System.out.println("Opening connection...");
 			HttpURLConnection connection = (HttpURLConnection) comment.openConnection();
 			connection.setRequestMethod("POST");
+			connection.setDoOutput(true);
+			connection.setRequestProperty("User-Agent", "Link demobilizer bot by /u/UnacceptableUse");
 			connection.setRequestProperty("Host","");
 			connection.setRequestProperty("Set-Cookie", cookieJar.get(new URI("http://reddit.com")).get(0).getValue());
 			connection.setRequestProperty("Length", "0");
 			connection.setRequestProperty("X-Target-URI","http://www.reddit.com");
-			System.out.println("Connected, reading reply...");
+			System.out.println("Connected, posting to output stream...");
+
+		    PrintWriter out = new PrintWriter(connection.getOutputStream()); 
+		    out.close();
+			
 			InputStream is = connection.getInputStream();
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 			System.out.println(br.readLine());
