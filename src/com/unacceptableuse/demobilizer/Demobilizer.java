@@ -1,6 +1,7 @@
 package com.unacceptableuse.demobilizer;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,7 +35,7 @@ public class Demobilizer extends JFrame{
 	private CookieManager cookieManager ;
 	private CookieStore cookieJar;
 	private ArrayList<String> postedThings = new ArrayList<String>();
-	private int posts = 0, errors = 0;
+	private int posts = 0, errors = 0, savecooldown = 0;
 	
 	private String[][] replacements = {
 			{"en.m.wikipedia.org", "en.wikipedia.org"},
@@ -45,6 +46,7 @@ public class Demobilizer extends JFrame{
 			{"mobile.theverge.com", "theverge.com"},
 			{"m.theatlantic.com", "theatlantic.com"},
 			{"m.ign.com", "ign.com"},
+			{"m.guardian.com", "guardian.com"},
 			{"m.facebook.com", "facebook.com"},
 			{"m.wolframalpha.com", "wolframalpha.com"},
 			{"m.flickr.com", "flickr.com"},
@@ -55,6 +57,20 @@ public class Demobilizer extends JFrame{
 	
 	public Demobilizer()
 	{
+		if(new File(FileSaver.getCleanPath()+"//postcheck.dat").exists())
+		{
+			postedThings = (ArrayList<String>) FileSaver.load(FileSaver.getCleanPath()+"//postcheck.dat");
+			System.out.println(postedThings.size()+" links corrected.");
+		}else
+		{
+			try {
+				new File(FileSaver.getCleanPath()+"//postcheck.dat").createNewFile();
+				System.out.println("Created file");
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 		
 		cookieManager = new CookieManager();
 		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
@@ -66,8 +82,9 @@ public class Demobilizer extends JFrame{
 		}
 		//scanSubreddit("todayilearned", 25);
 		//scanSubreddit("gaming", 25);
-		scanSubreddit("worldnews", 25);
-		scanSubreddit("politics", 25);
+		//scanSubreddit("worldnews", 25);
+		//scanSubreddit("politics", 25);
+		scanSubreddit("technology", 25);
 		scanSubreddit("science", 25);
 		scanSubreddit("minecraft", 25);
 		scanSubreddit("HIMYM", 25);
@@ -86,7 +103,12 @@ public class Demobilizer extends JFrame{
 		scanSubreddit("toosoon", 25);
 		scanSubreddit("thanksobama", 25);
 		scanSubreddit("softwaregore", 25);
+		
+		System.out.println("Saving...");
+		FileSaver.save(postedThings, FileSaver.getCleanPath()+"//postcheck.dat");
 		System.out.println("Done! "+posts+" posts demobilized. "+errors+" errors occurred");
+		
+		
 	}
 	
 	
@@ -188,7 +210,7 @@ public class Demobilizer extends JFrame{
 						{
 							if(comment.contains(replacements[j][0]))
 							{
-								String reply = "**For non mobile users[:](http://reddit.com/r/LinkDemobilizerBot)**  \n "+comment.replace(replacements[j][0], replacements[j][1]);
+								String reply = "**For non mobile users:**  \n "+comment.replace(replacements[j][0], replacements[j][1])+"\n-------------------------------\n*[Did I get it wrong?](http://reddit.com/r/LinkDemobilizerBot)*";
 								System.out.println("Found match of "+replacements[j][0]);
 								System.out.println("Posting comment...");
 								System.out.println("Reply: "+reply);
@@ -202,9 +224,16 @@ public class Demobilizer extends JFrame{
 								}
 								if(canPost)
 								{
-									posts++;
+									savecooldown++;
 									comment(commentID, reply);
 									postedThings.add(commentID);
+									if(savecooldown >= 3)
+									{
+										System.out.println("Saved file");
+										FileSaver.save(postedThings, FileSaver.getCleanPath()+"//postcheck.dat");
+										savecooldown = 0;
+									}
+									
 									System.out.println("Comment posted succesfully");
 								}
 								else
@@ -224,7 +253,7 @@ public class Demobilizer extends JFrame{
 						String postLink = je.getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("children").getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("url").getAsString();
 						if(postLink.contains(replacements[j][0]))
 						{
-							String reply = "**[For non mobile users:](http://reddit.com/r/LinkDemobilizerBot)**  \n"+postLink.replace(replacements[j][0], replacements[j][1])+"\n-------------------------------\n*[Did I get it wrong?](http://reddit.com/r/LinkDemobilizerBot)*";
+							String reply = "**For non mobile users:**  \n"+postLink.replace(replacements[j][0], replacements[j][1])+"\n-------------------------------\n*[Did I get it wrong?](http://reddit.com/r/LinkDemobilizerBot)*";
 							System.out.println("Found match of (intitle)"+replacements[j][0]);
 							String commentID  = je.getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("children").getAsJsonArray().get(0).getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString().replace("\"", "");
 							System.out.println("Posting comment...");
@@ -238,10 +267,16 @@ public class Demobilizer extends JFrame{
 							}
 							if(canPost)
 							{
-								posts++;
+								savecooldown++;
 								comment(commentID, reply);
 								postedThings.add(commentID);
+								if(savecooldown >= 3)
+								{
+									FileSaver.save(postedThings, FileSaver.getCleanPath()+"//postcheck.dat");
+									savecooldown = 0;
+								}
 								System.out.println("Comment posted succesfully");
+								
 							}
 							else
 							{
@@ -256,6 +291,7 @@ public class Demobilizer extends JFrame{
 				}
 			}		
 		} catch (MalformedURLException e) {} catch (IOException e) {
+			errors++;
 			System.out.println("Could not connect to reddit.com");
 			e.printStackTrace();
 		}
@@ -283,6 +319,7 @@ public class Demobilizer extends JFrame{
 	
 	public boolean comment(String thing_id, String text)
 	{
+		posts++;
 		try {
 			URL comment = new URL("http://www.reddit.com/api/comment?thing_id="+thing_id+"&text="+URLEncoder.encode(text, "UTF-8")+"&uh="+modhash);
 			System.out.println("Opening connection...");
@@ -301,17 +338,7 @@ public class Demobilizer extends JFrame{
 			
 			InputStream is = connection.getInputStream();
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
-			String line = br.readLine();
-			if(line.contains("RATELIMIT"))
-			{
-				System.out.println(line);
-				System.out.println("Commenting too much... waiting 1 minute!");
-				Thread.sleep(60000);
-				System.out.println("Retrying...");
-				br.close();
-				is.close();
-				comment(thing_id, text);
-			}
+
 			is.close();
 			br.close();
 		} catch (Exception e) {
