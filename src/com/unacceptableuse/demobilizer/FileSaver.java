@@ -31,9 +31,7 @@ public class FileSaver {
 			new File(path).mkdir();
 			save(file, path);
 		}
-		catch(Exception e)
-		{
-			e.printStackTrace();
+		catch(Exception e){e.printStackTrace();
 		}
 	
 
