@@ -1,5 +1,7 @@
 package com.unacceptableuse.demobilizer;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.swt.SWT;
@@ -16,6 +18,7 @@ public class Scheduler implements MouseListener{
 	protected Shell shlLinkdemobilizerbotScheduler;
 	Spinner spinner_1, spinner;
 	Button btnRunFor;
+	Label lblRanXTimes, lblCorrectedXLinks, lblXErrors, lblXDupes, lblXTotalScanned;
 	int hours, times, posts, errors, scanned, dupes, timesran;
 	boolean doInfinite = true;
 	Reddit r = new Reddit(this);
@@ -69,23 +72,23 @@ public class Scheduler implements MouseListener{
 		spinner_1.setSelection(2);
 		spinner_1.setBounds(52, 185, 47, 18);
 		
-		Label lblRanXTimes = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
+		lblRanXTimes = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
 		lblRanXTimes.setBounds(246, 121, 144, 15);
 		lblRanXTimes.setText("Ran "+timesran+" times");
 		
-		Label lblCorrectedXLinks = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
+		lblCorrectedXLinks = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
 		lblCorrectedXLinks.setBounds(246, 145, 96, 16);
 		lblCorrectedXLinks.setText("Corrected "+posts+" links");
 		
-		Label lblXErrors = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
+		lblXErrors = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
 		lblXErrors.setBounds(256, 167, 55, 15);
 		lblXErrors.setText(errors+" errors");
 		
-		Label lblXDupes = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
+		lblXDupes = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
 		lblXDupes.setBounds(256, 188, 55, 15);
 		lblXDupes.setText(dupes+" dupes");
 		
-		Label lblXTotalScanned = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
+		lblXTotalScanned = new Label(shlLinkdemobilizerbotScheduler, SWT.NONE);
 		lblXTotalScanned.setBounds(256, 211, 116, 15);
 		lblXTotalScanned.setText(scanned+" total scanned");
 		
@@ -121,6 +124,7 @@ public class Scheduler implements MouseListener{
 	public void mouseDown(MouseEvent arg0) {
 		hours = spinner.getSelection();
 		times = spinner_1.getSelection();
+		timesran++;
 		
 		System.out.println("Running "+times+" times");
 		
@@ -130,18 +134,41 @@ public class Scheduler implements MouseListener{
 				
 				@Override
 				public void run() {
-					System.out.println("Running");
-					r.run();
+					try {
+						r.modhash = r.login("LinkDemobilizerBot", "01189998819991197253");
+						ArrayList<String>subreddits = r.getSubscribedReddits();
+					
+						
+						
+						for(String s : subreddits)
+						{
+							r.scanSubreddit(s, 25);
+							r.run();
+							lblRanXTimes.setText("Ran "+timesran+" times");
+							lblXErrors.setText(errors+" errors");
+							lblXDupes.setText(dupes+" dupes");
+							lblXTotalScanned.setText(scanned+" total scanned");
+							lblCorrectedXLinks.setText("Corrected "+posts+" links");
+							lblRanXTimes.redraw(); lblCorrectedXLinks.redraw(); lblXErrors.redraw(); lblXDupes.redraw(); lblXTotalScanned.redraw();
+							shlLinkdemobilizerbotScheduler.redraw();
+							
+						}
+						
+						
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					
 				}
 				
 			});
-	  
+			if(!btnRunFor.getEnabled())times++;
 			System.out.println("Waiting...");
 			try {
 				Thread.sleep(TimeUnit.MILLISECONDS.convert(hours, TimeUnit.HOURS));
 			} catch (InterruptedException e) {e.printStackTrace();}
-			timesran++;
-			if(!btnRunFor.getEnabled())times++;
+		
+			
 		}
 
 	}
@@ -151,4 +178,5 @@ public class Scheduler implements MouseListener{
 
 		
 	}
+	
 }
