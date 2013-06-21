@@ -29,7 +29,6 @@ public class FileSaver {
 		catch(FileNotFoundException e)
 		{
 			new File(path).mkdir();
-			save(file, path);
 		}
 		catch(Exception e){e.printStackTrace();
 		}

@@ -12,6 +12,7 @@ import java.net.CookieStore;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -19,11 +20,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.google.gson.JsonParser;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
+import com.google.gson.JsonSyntaxException;
 
 public class Reddit {
 
@@ -31,7 +31,7 @@ public class Reddit {
 	String modhash;
 	private CookieManager cookieManager;
 	private CookieStore cookieJar;
-	private String sqlpass = "-";
+	private String sqlpass = "m2c5+Q0N91xV";
 	public ArrayList<String> postedThings = new ArrayList<String>();
 	public int posts = 0, errors = 0, scanned = 0, dupes = 0;
 	public boolean performingScan;
@@ -41,7 +41,6 @@ public class Reddit {
 			{ "en.m.wikipedia.org", "en.wikipedia.org" },
 			{ "m.wikipedia.org", "wikipedia.org" },
 			{ "m.reddit.com", "reddit.com" },
-			{ "m.youtube.com", "youtube.com" },
 			{ "mobile.slate.com", "slate.com" },
 			{ "mobile.theverge.com", "theverge.com" },
 			{ "m.theatlantic.com", "theatlantic.com" },
@@ -56,29 +55,40 @@ public class Reddit {
 	public Reddit(Scheduler scheduler) {
 		sch = scheduler;
 		cookieManager = new CookieManager();
-		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 		CookieHandler.setDefault(cookieManager);
+		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+
 	}
 
 	public Reddit(int hourwait) {
 		cookieManager = new CookieManager();
-		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 		CookieHandler.setDefault(cookieManager);
+		 //postedThings = (ArrayList<String>)
+		 //FileSaver.load(FileSaver.getCleanPath()+"//postcheck.dat");
+		System.out.println(postedThings.size() + " thing_IDs processed total.");
 		while (true) {
 			try {
 
-				modhash = login("LinkDemobilizerBot", "-");
+				modhash = login("LinkDemobilizerBot", "01189998819991197253");
 
 				ArrayList<String> subreddits;
 
 				subreddits = getSubscribedReddits();
-
+				scanSubreddit("bestof", 25);
+				scanSubreddit("wikipedia", 25);
+				scanSubreddit("mildlyinteresting", 25);
+				scanSubreddit("mindcrack", 25);
+				scanSubreddit("minecraft", 25);
+				scanSubreddit("daddit", 25);
+				scanSubreddit("random", 25);
+				scanSubreddit("random", 25);
 				for (String s : subreddits) {
-					//scanSubreddit(s, 25);
+					scanSubreddit(s, 25);
 				}
+
 				System.out.println("Finished, " + posts + " posts submitted "
 						+ errors + " errors occurred " + dupes
-						+ " duplicates stopped.");
+						+ " duplicates stopped this session.");
 				System.out.println("Scanned a grand total of " + scanned
 						+ " posts.");
 				System.out.println("Waiting...");
@@ -96,54 +106,41 @@ public class Reddit {
 	public String login(String user, String pw) throws IOException {
 		URL url = null;
 		try {
-			url = new URL("http://www.reddit.com/api/login/" + user
-					+ "?api_type=json&user=" + user + "&passwd=" + pw);
-		} catch (MalformedURLException e) {
-		}
-		HttpURLConnection ycConnection = null;
-		ycConnection = (HttpURLConnection) url.openConnection();
-		ycConnection.setRequestMethod("POST");
-		ycConnection.setDoOutput(true);
-		ycConnection.setUseCaches(false);
-		ycConnection.setRequestProperty("Content-Type",
-				"application/x-www-form-urlencoded; charset=UTF-8");
-		ycConnection.setRequestProperty("User-Agent",
-				"Link instance bot by /u/UnacceptableUse");
-
-		PrintWriter out = new PrintWriter(ycConnection.getOutputStream());
-		out.close();
-
-		BufferedReader in = new BufferedReader(new InputStreamReader(
-				ycConnection.getInputStream()));
-		System.out.println(ycConnection.getHeaderField("Set-Cookie"));
-		String response = in.readLine();
-		System.out.println(response);
-		JsonParser parser = new JsonParser();
-
-		cookieJar = cookieManager.getCookieStore();
-		List<HttpCookie> cookies = cookieJar.getCookies();
-		for (HttpCookie cookie : cookies) {
-			System.out.println("Received cookie " + cookie.getName() + " - "
-					+ cookie.getValue());
-		}
-		if (cookies.size() == 0) {
-			System.out.println("Reddit didn't give me a cookie :(");
-			try {
-				cookieJar.add(url.toURI(), new HttpCookie("reddit_session",
-						parser.parse(response).getAsJsonObject().get("json")
-								.getAsJsonObject().get("data")
-								.getAsJsonObject().get("cookie").getAsString()
-								.replace("\"", "")));
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			System.out.println("Manually added cookie, " + cookies.size());
-		}
-
-		String modhash = parser.parse(response).getAsJsonObject().get("json")
-				.getAsJsonObject().get("data").getAsJsonObject().get("modhash")
-				.getAsString().replace("\"", "");
-		return modhash;
+		    url = new URL("http://www.reddit.com/api/login/"+user+"?api_type=json&user="+user+"&passwd="+pw);
+			  } catch (MalformedURLException e) {}
+			     HttpURLConnection ycConnection = null;
+			     ycConnection = (HttpURLConnection) url.openConnection();
+			     ycConnection.setRequestMethod("POST");
+			     ycConnection.setDoOutput(true);
+			     ycConnection.setUseCaches (false);
+			     ycConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+			     ycConnection.setRequestProperty("User-Agent", "Link instance bot by /u/UnacceptableUse");
+			
+			     PrintWriter out = new PrintWriter(ycConnection.getOutputStream());
+			     out.close();
+			
+			     BufferedReader in = new BufferedReader(new InputStreamReader(ycConnection.getInputStream()));
+			     String response = in.readLine();
+			     System.out.println(response);
+			     JsonParser parser = new JsonParser();
+			    
+			     cookieJar = cookieManager.getCookieStore();
+			     List<HttpCookie> cookies = cookieJar.getCookies();
+			     try {
+						cookieJar.add(url.toURI(),  new HttpCookie("reddit_session",parser.parse(response).getAsJsonObject().get("json").getAsJsonObject().get("data").getAsJsonObject().get("cookie").getAsString().replace("\"", "").split(",")[2]));
+					} catch (JsonSyntaxException e) {
+						e.printStackTrace();
+					} catch (URISyntaxException e) {
+						e.printStackTrace();
+					}
+			     for(HttpCookie cookie : cookies)
+			     {
+			     System.out.println("Received cookie "+cookie.getName()+" - "+cookie.getValue());
+			     }
+			   
+			
+			    String modhash = parser.parse(response).getAsJsonObject().get("json").getAsJsonObject().get("data").getAsJsonObject().get("modhash").getAsString().replace("\"", "");
+			    return modhash;
 	}
 
 	public ArrayList<String> getSubscribedReddits()
@@ -183,20 +180,9 @@ public class Reddit {
 				br.close();
 				return sr;
 			} catch (IllegalStateException e) {
-				System.out
-						.println("Unable to get subscribed subreddits, randomizing selection...");
-				ArrayList<String> sr = new ArrayList<String>();
-				sr.add("funny");
-				sr.add("bestof");
-				sr.add("askreddit");
-				sr.add("pics");
-				sr.add("LinkDemobilizerBot");
-				sr.add("all");
-				for (int i = 0; i < 25; i++) {
-					sr.add("random");
-					return sr;
-
-				}
+				System.err.println("Cookie error. Exiting");
+				e.printStackTrace();
+				System.exit(-1);
 
 			}
 			return null;
@@ -273,12 +259,15 @@ public class Reddit {
 								.getAsString().replace("\"", "");
 						for (int j = 0; j < replacements.length; j++) {
 							if (comment.contains(replacements[j][0])) {
-								String reply = "**For non mobile users:**  \n "
-										+ comment.replace(replacements[j][0],
-												replacements[j][1])
-										+ "\n  \n*[Did I get it wrong?](http://reddit.com/r/LinkDemobilizerBot)*";
-								System.out.println("Found match of "
-										+ replacements[j][0]);
+								String reply = 
+								//////////////////////////////////Reply
+										
+								"**For non mobile users:**  \n "
+								+ comment.replace(replacements[j][0],replacements[j][1])
+								+ "\n  \n*[Did I get it wrong?](http://reddit.com/r/LinkDemobilizerBot)*";
+								
+								///////////////////////////////////
+								System.out.println("Found match of "+ replacements[j][0]);
 
 								boolean canPost = true;
 								for (String s : postedThings) {
@@ -367,7 +356,6 @@ public class Reddit {
 		} catch (Exception e) {
 			e.printStackTrace();
 			errors++;
-			return false;
 		}
 		return true;
 	}
