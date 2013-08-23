@@ -55,7 +55,6 @@ public class Reddit {
 	public Reddit(Scheduler scheduler) {
 		sch = scheduler;
 		cookieManager = new CookieManager();
-		CookieHandler.setDefault(cookieManager);
 		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 
 	}
@@ -124,19 +123,22 @@ public class Reddit {
 			     System.out.println(response);
 			     JsonParser parser = new JsonParser();
 			    
+			   
 			     cookieJar = cookieManager.getCookieStore();
 			     List<HttpCookie> cookies = cookieJar.getCookies();
-			     try {
-						cookieJar.add(url.toURI(),  new HttpCookie("reddit_session",parser.parse(response).getAsJsonObject().get("json").getAsJsonObject().get("data").getAsJsonObject().get("cookie").getAsString().replace("\"", "").split(",")[2]));
-					} catch (JsonSyntaxException e) {
-						e.printStackTrace();
-					} catch (URISyntaxException e) {
-						e.printStackTrace();
-					}
+			    
 			     for(HttpCookie cookie : cookies)
 			     {
 			     System.out.println("Received cookie "+cookie.getName()+" - "+cookie.getValue());
 			     }
+			     try {
+			    	 System.out.println("Forcefully adding cookie");
+						cookieJar.add(url.toURI(),  new HttpCookie("reddit_session",parser.parse(response).getAsJsonObject().get("json").getAsJsonObject().get("data").getAsJsonObject().get("cookie").getAsString().replace("\"", "").split(",")[2]));
+
+						
+					} catch (URISyntaxException e) {
+						e.printStackTrace();
+					}
 			   
 			
 			    String modhash = parser.parse(response).getAsJsonObject().get("json").getAsJsonObject().get("data").getAsJsonObject().get("modhash").getAsString().replace("\"", "");
@@ -156,6 +158,8 @@ public class Reddit {
 					"application/x-www-form-urlencoded; charset=UTF-8");
 			connection.setRequestProperty("User-Agent",
 					"Link instance bot by /u/UnacceptableUse");
+			connection.setRequestProperty("Cookie", cookieJar.get(connection.getURL().toURI()).get(0).toString());
+			System.out.println( cookieJar.get(connection.getURL().toURI()).get(0).toString());
 
 			InputStream is = connection.getInputStream();
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
