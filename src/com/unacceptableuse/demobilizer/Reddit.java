@@ -31,7 +31,7 @@ public class Reddit {
 	String modhash;
 	private CookieManager cookieManager;
 	private CookieStore cookieJar;
-	private String sqlpass = "m2c5+Q0N91xV";
+	private String sqlpass = "";
 	public ArrayList<String> postedThings = new ArrayList<String>();
 	public int posts = 0, errors = 0, scanned = 0, dupes = 0;
 	public boolean performingScan;
@@ -68,7 +68,7 @@ public class Reddit {
 		while (true) {
 			try {
 
-				modhash = login("LinkDemobilizerBot", "01189998819991197253");
+				modhash = login("LinkDemobilizerBot", "");
 
 				ArrayList<String> subreddits;
 
